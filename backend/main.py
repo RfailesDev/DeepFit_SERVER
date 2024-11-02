@@ -1,6 +1,7 @@
 # backend/main.py
 
 import eventlet
+
 eventlet.monkey_patch()
 
 import os
@@ -13,20 +14,24 @@ from pushup_counter import PushUpCounter
 import json
 from pyngrok import ngrok
 
-app = Flask(__name__, static_folder='../frontend', template_folder='../frontend')
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'secret!' #  ВАЖНО: добавить секретный ключ
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
 # Инициализация PushUpCounter
 counter = PushUpCounter()
 
+
 @app.route('/')
 def index():
     return render_template('index.html')
+
 
 @socketio.on('connect')
 def handle_connect():
     print('Client connected')
     emit('status', {'status': 'Connected to server'})
+
 
 @socketio.on('image')
 def handle_image(data):
@@ -58,11 +63,14 @@ def handle_image(data):
         print(f"Error processing frame: {e}")
         emit('result', {'status': 'error', 'message': str(e)})
 
+
 @socketio.on('disconnect')
 def handle_disconnect():
     print('Client disconnected')
 
+
 if __name__ == '__main__':
+    ngrok.set_auth_token("<NGROK_AUTHTOKEN>")
     # Открыть туннель ngrok
     public_url = ngrok.connect(5000)
     print(f"Public URL: {public_url}")

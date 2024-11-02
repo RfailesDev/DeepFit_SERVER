@@ -1,0 +1,36 @@
+<!-- backend/templates/index.html -->
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Подсчет Отжиманий в Реальном Времени</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Подсчет Отжиманий в Реальном Времени</h1>
+        <button id="activate-camera" class="activate-button">Activate Camera</button>
+        <div class="video-container" style="display: none;">
+            <video id="video" autoplay muted></video>
+            <canvas id="overlay"></canvas>
+        </div>
+        <div class="status" style="display: none;">
+            <p id="feedback">Жду начала...</p>
+            <p>Повторы: <span id="count">0</span></p>
+            <div class="progress-bar">
+                <div id="progress"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Подключение jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Подключение Socket.IO -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.min.js"
+            integrity="sha512-JgC5fCimjqBvBBbkI8RoSZ7K3PoK/sqiymsdliFWhFE+tMP0rXlyFTqzBYTI+9yad0tLXIQUxFEFEzzSzLCmLg=="
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- Подключение скрипта -->
+    <script src="../static/script.js"></script>
+</body>
+</html>
