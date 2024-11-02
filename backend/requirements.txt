@@ -1,0 +1,12 @@
+python-multipart
+
+tensorflow[and-cuda]
+matplotlib
+
+
+flask
+flask-socketio
+eventlet
+opencv-python
+mediapipe
+numpy
