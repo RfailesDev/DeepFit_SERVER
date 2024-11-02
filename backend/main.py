@@ -1,5 +1,8 @@
 # backend/main.py
 
+import eventlet
+eventlet.monkey_patch()
+
 import os
 import base64
 import cv2
@@ -7,11 +10,8 @@ import numpy as np
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
 from pushup_counter import PushUpCounter
-import eventlet
 import json
-
-# Необходимо использовать eventlet с Flask-SocketIO
-eventlet.monkey_patch()
+from pyngrok import ngrok
 
 app = Flask(__name__, static_folder='../frontend', template_folder='../frontend')
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
@@ -63,11 +63,9 @@ def handle_disconnect():
     print('Client disconnected')
 
 if __name__ == '__main__':
-    import threading
-
-    # Запуск ngrok в отдельном потоке
-    ngrok_thread = threading.Thread(target=lambda: os.system('./ngrok http 5000'))
-    ngrok_thread.start()
+    # Открыть туннель ngrok
+    public_url = ngrok.connect(5000)
+    print(f"Public URL: {public_url}")
 
     # Запуск Flask-SocketIO сервера
     socketio.run(app, host='0.0.0.0', port=5000)
