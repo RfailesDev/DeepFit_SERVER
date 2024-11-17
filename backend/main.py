@@ -15,12 +15,11 @@ import json
 from pyngrok import ngrok
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'secret!' #  ВАЖНО: добавить секретный ключ
+app.config['SECRET_KEY'] = 'your_secret_key'  # Замените на ваш секретный ключ
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
 # Инициализация PushUpCounter
 counter = PushUpCounter()
-
 
 @app.route('/')
 def index():
@@ -51,14 +50,16 @@ def handle_image(data):
         # Формирование данных для отправки
         response = {
             'status': 'processing',
-            'progress': result.get('count', 0),
+            'count': int(result.get('count', 0)),
             'landmarks': result.get('landmarks', []),
             'angles': result.get('angles', {}),
-            'feedback': result.get('feedback', '')
+            'feedback': result.get('feedback', ''),
+            'frame_width': frame.shape[1],
+            'frame_height': frame.shape[0]
         }
 
-        # Отправка данных обратно клиенту
-        emit('result', json.dumps(response))
+        # Отправка данных обратно клиенту без двойного кодирования
+        emit('result', response)
     except Exception as e:
         print(f"Error processing frame: {e}")
         emit('result', {'status': 'error', 'message': str(e)})
@@ -70,7 +71,7 @@ def handle_disconnect():
 
 
 if __name__ == '__main__':
-    ngrok.set_auth_token("<NGROK_AUTHTOKEN>")
+    ngrok.set_auth_token("...")  # Замените на ваш токен ngrok
     # Открыть туннель ngrok
     public_url = ngrok.connect(5000)
     print(f"Public URL: {public_url}")

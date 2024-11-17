@@ -28,17 +28,43 @@ $(document).ready(function() {
 
         socket.on('result', function(data) {
             try {
-                const parsedData = JSON.parse(data);
-                // Обновление статуса и счётчика
-                feedback.text(parsedData.feedback);
-                countDisplay.text(parsedData.progress);
+                // Если данные уже объект
+                const parsedData = data;
 
-                // Обновление прогресс-бара
-                const progressPercentage = Math.min(Math.max(parsedData.progress, 0), 100);
-                progressBar.css('width', `${progressPercentage}%`);
+                if(parsedData.status === 'processing') {
+                    // Обновление обратной связи и счётчика
+                    feedback.text(parsedData.feedback);
+                    countDisplay.text(parsedData.count);
 
-                // Отрисовка аннотаций
-                drawAnnotations(parsedData.landmarks);
+                    // Изменение цвета обратной связи в зависимости от состояния
+                    if(parsedData.feedback.startsWith("Go Up") || parsedData.feedback.startsWith("Go Down")) {
+                        feedback.css('color', 'green');
+                    } else if(parsedData.feedback.startsWith("Bad")) {
+                        feedback.css('color', 'red');
+                    } else if(parsedData.feedback.startsWith("Keep")) {
+                        feedback.css('color', 'orange');
+                    } else {
+                        feedback.css('color', 'black');
+                    }
+
+                    // Вычисление процента успешности на основе углов
+                    const elbowAngle = parsedData.angles.elbow || 0;
+                    const pushupSuccessPercentage = Math.min(Math.max(((elbowAngle - 90) / 70) * 100, 0), 100);
+                    progressBar.css('width', `${pushupSuccessPercentage}%`);
+
+                    // Масштабирование координат ключевых точек
+                    const scaleX = overlay.width / parsedData.frame_width;
+                    const scaleY = overlay.height / parsedData.frame_height;
+                    const adjustedLandmarks = parsedData.landmarks.map(lm => ({
+                        id: lm[0],
+                        x: lm[1] * scaleX,
+                        y: lm[2] * scaleY
+                    }));
+
+                    // Отрисовка аннотаций
+                    drawAnnotations(adjustedLandmarks);
+                }
+
             } catch (e) {
                 console.error('Ошибка при обработке данных:', e);
             }
@@ -48,8 +74,14 @@ $(document).ready(function() {
             console.log('Отключено от сервера');
         });
 
-        // Захват видео с веб-камеры
-        navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+        // Захват видео с веб-камеры с заданными ограничениями
+        navigator.mediaDevices.getUserMedia({
+            video: {
+                width: { ideal: 640 },
+                height: { ideal: 480 }
+            },
+            audio: false
+        })
             .then(function(stream) {
                 video.srcObject = stream;
                 video.play();
@@ -101,30 +133,19 @@ $(document).ready(function() {
             // Преобразование списка ключевых точек в объект для удобства доступа
             const lm = {};
             landmarks.forEach(point => {
-                lm[point[0]] = {x: point[1], y: point[2]};
+                lm[point.id] = {x: point.x, y: point.y};
             });
 
-            // Нарисовать круги на ключевых точках
-            for (const id in lm) {
-                const x = lm[id].x;
-                const y = lm[id].y;
-                ctx.beginPath();
-                ctx.arc(x, y, 5, 0, 2 * Math.PI);
-                ctx.fillStyle = 'red';
-                ctx.fill();
-            }
-
-            // Нарисовать линии между ключевыми точками (по связям Mediapipe)
+            // Нарисовать линии по связям Mediapipe
             const connections = [
                 [11, 13], [13, 15],  // Левая рука
                 [12, 14], [14, 16],  // Правая рука
                 [11, 23], [12, 24],  // Туловище
                 [23, 25], [24, 26],  // Ноги
+                [11, 12],             // Шея между плечами
+                [23, 24],             // Туловище горизонтально
+                [25, 26]              // Ноги горизонтально
                 // Добавьте другие связи по необходимости
-                [11, 12], [23, 24],
-                [25, 26],
-                [13, 11], [14, 12],
-                // Вспомогательные связи для более полной визуализации
             ];
 
             connections.forEach(pair => {
@@ -138,6 +159,16 @@ $(document).ready(function() {
                     ctx.stroke();
                 }
             });
+
+            // Нарисовать круги на ключевых точках
+            for (const id in lm) {
+                const x = lm[id].x;
+                const y = lm[id].y;
+                ctx.beginPath();
+                ctx.arc(x, y, 5, 0, 2 * Math.PI);
+                ctx.fillStyle = 'red';
+                ctx.fill();
+            }
         }
     }
 

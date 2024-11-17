@@ -9,7 +9,6 @@ import os
 
 
 # Если вы используете DeepFitClassifier, импортируйте его здесь.
-# Убедитесь, что структура папок соответствует
 # from DeepFit.DeepFitClassifier import DeepFitClassifier
 
 class PushUpCounter:
@@ -68,13 +67,14 @@ class PushUpCounter:
         }
 
         if landmark_list:
-            # Пример расчета углов
-            shoulder = self.get_landmark(landmark_list, 11)
+            # Расчёт углов
+            shoulder = self.get_landmark(landmark_list, 11)  # Левая рука
             elbow = self.get_landmark(landmark_list, 13)
             wrist = self.get_landmark(landmark_list, 15)
             hip = self.get_landmark(landmark_list, 23)
+            knee = self.get_landmark(landmark_list, 25)  # Левое колено
 
-            if shoulder and elbow and wrist and hip:
+            if shoulder and elbow and wrist and hip and knee:
                 elbow_angle = calculate_angle(
                     (shoulder[1], shoulder[2]),
                     (elbow[1], elbow[2]),
@@ -85,11 +85,10 @@ class PushUpCounter:
                     (shoulder[1], shoulder[2]),
                     (hip[1], hip[2])
                 )
-                # Для hip_angle можно использовать другую ключевую точку для улучшения
                 hip_angle = calculate_angle(
                     (shoulder[1], shoulder[2]),
                     (hip[1], hip[2]),
-                    (hip[1], hip[2])  # Можно заменить на другую точку, например, 25 или 24
+                    (knee[1], knee[2])
                 )
 
                 data['angles'] = {
@@ -98,7 +97,7 @@ class PushUpCounter:
                     'hip': hip_angle
                 }
 
-                # Подсчет отжиманий
+                # Подсчёт отжиманий
                 self.update_counters(elbow_angle, shoulder_angle, hip_angle)
                 data['feedback'] = self.feedback
                 data['count'] = self.count
@@ -142,9 +141,12 @@ class PushUpCounter:
         :param shoulder_angle: Угол в плече
         :param hip_angle: Угол в бедре
         """
+        # Логирование углов для отладки
+        print(f"Elbow Angle: {elbow_angle:.2f}, Shoulder Angle: {shoulder_angle:.2f}, Hip Angle: {hip_angle:.2f}")
+
         # Интерполяция угла локтя для прогресс-бара и процента успешности
         pushup_success_percentage = np.interp(elbow_angle, (90, 160), (0, 100))
-        # Прогресс-бар будет рассчитан на фронтенде, поэтому можно его не отправлять
+        pushup_success_percentage = int(pushup_success_percentage)  # Округление для отправки клиенту
 
         # Проверка начальной формы
         if elbow_angle > 160 and shoulder_angle > 40 and hip_angle > 160:
@@ -154,7 +156,7 @@ class PushUpCounter:
 
         # Полный цикл выполнения отжиманий
         if self.form == 1:
-            if pushup_success_percentage == 0:
+            if pushup_success_percentage <= 10:
                 if elbow_angle <= 90 and hip_angle > 160:
                     if self.direction == 0:
                         self.count += 0.5
@@ -162,13 +164,18 @@ class PushUpCounter:
                     self.feedback = "Go Up"
                 else:
                     self.feedback = "Bad Form. Correct Posture."
-            elif pushup_success_percentage == 100:
-                if elbow_angle > 160 and shoulder_angle > 40 and hip_angle > 160:
+            elif pushup_success_percentage >= 90:
+                if elbow_angle > 160 and shoulder_angle > 20 and hip_angle > 160:
                     if self.direction == 1:
                         self.count += 0.5
                         self.direction = 0
                     self.feedback = "Go Down"
                 else:
                     self.feedback = "Bad Form. Correct Posture."
+            else:
+                self.feedback = "Keep Going"
         else:
             self.feedback = "Bad Form. Correct Posture."
+
+        # Логирование состояния счётчика для отладки
+        print(f"Count: {self.count}, Direction: {self.direction}, Feedback: {self.feedback}")
